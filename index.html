@@ -10,10 +10,13 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="robots" content="index,follow">
   <!-- Favicon / Tab Logo -->
-  <link rel="icon" type="image/jpeg" href="assets/logo.jpeg">
-  <link rel="shortcut icon" type="image/jpeg" href="assets/logo.jpeg">
-  <link rel="apple-touch-icon" href="assets/logo.jpeg">
+  <link rel="icon" type="image/jpeg" href="./assets/logo.jpeg">
+  <link rel="shortcut icon" type="image/jpeg" href="./assets/logo.jpeg">
+  <link rel="apple-touch-icon" href="./assets/logo.jpeg">
   <link rel="stylesheet" href="style.css">
+  <!-- Firebase App & Auth SDK (v10 Modular Compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
 </head>
 <body>
 
@@ -36,7 +39,14 @@
       <a href="#location">Location</a>
       <a href="#contact">Contact</a>
     </nav>
-    <a class="call top" href="tel:+918148157275">Call Now</a>
+    <div class="header-actions">
+      <!-- Auth / Account Button Trigger -->
+      <button type="button" class="btn-auth-trigger" id="authBtnTrigger" aria-label="Account Login">
+        <span class="auth-icon" id="authIcon">👤</span>
+        <span id="authBtnLabel">Login</span>
+      </button>
+      <a class="call top" href="tel:+918148157275">Call Now</a>
+    </div>
   </div>
 </header>
 
@@ -668,6 +678,142 @@
   <a target="_blank" href="https://wa.me/918148157275?text=Hello%205G%20Taxi%2C%20I%20would%20like%20to%20book%20a%20taxi." aria-label="WhatsApp 5G Taxi" title="WhatsApp">◉</a>
 </div>
 <button class="scroll-top" id="scrollTop" aria-label="Back to top" title="Back to top">↑</button>
+
+<!-- ===== SECURE FIREBASE AUTHENTICATION MODAL ===== -->
+<div class="auth-modal-backdrop" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authModalTitle" style="display:none;">
+  <div class="auth-modal-card">
+    <button type="button" class="auth-modal-close" id="authModalClose" aria-label="Close auth dialog">✕</button>
+
+    <!-- Brand Header -->
+    <div class="auth-modal-header">
+      <div class="auth-logo-badge">
+        <img src="assets/logo.jpeg" alt="5G Taxi logo">
+        <span>5G TAXI</span>
+      </div>
+      <h2 id="authModalTitle">Welcome Back</h2>
+      <p id="authModalSubtitle">Sign in with your email to manage rides and quick bookings</p>
+    </div>
+
+    <!-- Alert / Status Notification Box -->
+    <div id="authAlertBox" class="auth-alert-box" role="alert" style="display:none;"></div>
+
+    <!-- VIEW 1: SIGN IN FORM -->
+    <form id="authLoginForm" class="auth-form-view">
+      <div class="auth-field">
+        <label for="loginEmail">Email Address</label>
+        <div class="auth-input-wrap">
+          <span class="auth-input-icon">✉️</span>
+          <input type="email" id="loginEmail" name="email" required placeholder="name@example.com" autocomplete="email">
+        </div>
+      </div>
+
+      <div class="auth-field">
+        <div class="auth-field-row">
+          <label for="loginPassword">Password</label>
+          <button type="button" class="auth-link-btn" id="btnGoForgot">Forgot Password?</button>
+        </div>
+        <div class="auth-input-wrap">
+          <span class="auth-input-icon">🔒</span>
+          <input type="password" id="loginPassword" name="password" required placeholder="Enter password" autocomplete="current-password">
+          <button type="button" class="btn-toggle-pwd" data-target="loginPassword" aria-label="Toggle password visibility">👁️</button>
+        </div>
+      </div>
+
+      <button type="submit" class="btn blue full auth-submit-btn" id="btnLoginSubmit">
+        <span class="btn-text">Sign In</span>
+        <span class="btn-spinner" style="display:none;"></span>
+      </button>
+
+      <div class="auth-switch-text">
+        Don't have an account? <button type="button" class="auth-link-btn" id="btnGoRegister">Create Account</button>
+      </div>
+    </form>
+
+    <!-- VIEW 2: CREATE ACCOUNT (REGISTER) FORM -->
+    <form id="authRegisterForm" class="auth-form-view" style="display:none;">
+      <div class="auth-field">
+        <label for="regName">Full Name</label>
+        <div class="auth-input-wrap">
+          <span class="auth-input-icon">👤</span>
+          <input type="text" id="regName" name="name" required placeholder="Enter your full name" autocomplete="name">
+        </div>
+      </div>
+
+      <div class="auth-field">
+        <label for="regEmail">Email Address</label>
+        <div class="auth-input-wrap">
+          <span class="auth-input-icon">✉️</span>
+          <input type="email" id="regEmail" name="email" required placeholder="name@example.com" autocomplete="email">
+        </div>
+      </div>
+
+      <div class="auth-field">
+        <label for="regPassword">Password (Min. 6 characters)</label>
+        <div class="auth-input-wrap">
+          <span class="auth-input-icon">🔒</span>
+          <input type="password" id="regPassword" name="password" required minlength="6" placeholder="Create a strong password" autocomplete="new-password">
+          <button type="button" class="btn-toggle-pwd" data-target="regPassword" aria-label="Toggle password visibility">👁️</button>
+        </div>
+      </div>
+
+      <button type="submit" class="btn blue full auth-submit-btn" id="btnRegisterSubmit">
+        <span class="btn-text">Create Account</span>
+        <span class="btn-spinner" style="display:none;"></span>
+      </button>
+
+      <div class="auth-switch-text">
+        Already have an account? <button type="button" class="auth-link-btn" id="btnGoLoginFromReg">Sign In</button>
+      </div>
+    </form>
+
+    <!-- VIEW 3: FORGOT / RESET PASSWORD FORM -->
+    <form id="authForgotForm" class="auth-form-view" style="display:none;">
+      <div class="auth-field">
+        <label for="forgotEmail">Registered Email Address</label>
+        <div class="auth-input-wrap">
+          <span class="auth-input-icon">✉️</span>
+          <input type="email" id="forgotEmail" name="email" required placeholder="name@example.com" autocomplete="email">
+        </div>
+        <small class="auth-help-text">We'll send a secure password reset link to your email.</small>
+      </div>
+
+      <button type="submit" class="btn blue full auth-submit-btn" id="btnForgotSubmit">
+        <span class="btn-text">Send Reset Link</span>
+        <span class="btn-spinner" style="display:none;"></span>
+      </button>
+
+      <div class="auth-switch-text">
+        Remembered password? <button type="button" class="auth-link-btn" id="btnGoLoginFromForgot">Back to Sign In</button>
+      </div>
+    </form>
+
+    <!-- VIEW 4: LOGGED IN USER PROFILE / ACCOUNT DASHBOARD -->
+    <div id="authProfileView" class="auth-form-view" style="display:none;">
+      <div class="auth-profile-card">
+        <div class="profile-avatar" id="profileAvatar">👤</div>
+        <div class="profile-details">
+          <h3 id="profileName">Passenger Name</h3>
+          <p id="profileEmail">user@example.com</p>
+          <div class="profile-verification-badge" id="profileVerificationBadge">
+            <span class="badge-icon">⏳</span>
+            <span class="badge-text">Email Unverified</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="verificationActionWrap" class="verification-action-box" style="display:none;">
+        <p>Please verify your email address to keep your account secure.</p>
+        <button type="button" class="btn-secondary" id="btnResendVerification">Send Verification Email</button>
+      </div>
+
+      <div class="profile-quick-actions">
+        <a href="#booking" class="btn blue full" id="btnProfileBookRide">🚖 Book Taxi Now</a>
+        <button type="button" class="btn-logout" id="btnLogoutUser">Log Out of 5G Taxi</button>
+      </div>
+    </div>
+
+  </div>
+</div>
 
 <script src="script.js"></script>
 </body>
