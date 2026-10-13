@@ -22,6 +22,229 @@
   --radius: 16px;
 }
 
+/* ===== TOP LIVE PROMO BAR & HERO TRUST BADGES ===== */
+.top-promo-bar {
+  background: linear-gradient(90deg, #06306e 0%, #0265d2 50%, #06306e 100%);
+  color: #ffffff;
+  font-size: 12.5px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.promo-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.promo-inner span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.35);
+  display: inline-block;
+  animation: livePulse 1.8s infinite;
+}
+
+@keyframes livePulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.25); opacity: 0.75; }
+}
+
+.promo-inner a {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fef08a;
+  font-weight: 800;
+  padding: 3px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(254, 240, 138, 0.35);
+  font-size: 12px;
+  transition: background 0.2s;
+}
+
+.promo-inner a:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.hero-trust-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.hero-trust-row span {
+  background: #f0f7ff;
+  border: 1px solid #d0e3f8;
+  color: #064094;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+@media (max-width: 680px) {
+  .promo-inner {
+    justify-content: center;
+    text-align: center;
+  }
+  .promo-inner a {
+    display: none;
+  }
+}
+
+/* ===== POPULAR DESTINATIONS STYLING ===== */
+.destinations-section {
+  background: linear-gradient(180deg, #f8fbff 0%, #edf5fd 100%);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.dest-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+}
+
+.dest-card {
+  background: #ffffff;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  overflow: hidden;
+  box-shadow: 0 6px 20px rgba(2, 101, 210, 0.04);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.dest-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 16px 36px rgba(2, 101, 210, 0.12);
+  border-color: #93c5fd;
+}
+
+.dest-img-wrap {
+  position: relative;
+  width: 100%;
+  height: 190px;
+  overflow: hidden;
+  background: #e2e8f0;
+}
+
+.dest-img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.dest-card:hover .dest-img-wrap img {
+  transform: scale(1.06);
+}
+
+.dest-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(11, 25, 44, 0.82);
+  backdrop-filter: blur(6px);
+  color: #fef08a;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(254, 240, 138, 0.3);
+}
+
+.dest-content {
+  padding: 20px 22px 22px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.dest-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+
+.dest-header h3 {
+  font-size: 1.15rem;
+  font-family: 'Manrope', sans-serif;
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.dest-dist {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--b);
+  background: var(--pale);
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+}
+
+.dest-content p {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin-bottom: 18px;
+  flex: 1;
+}
+
+.dest-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px dashed var(--line);
+  padding-top: 14px;
+}
+
+.dest-tag {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.btn-dest-book {
+  min-height: 38px;
+  padding: 0 16px;
+  font-size: 12.5px;
+  font-weight: 700;
+  border-radius: 8px;
+}
+
+@media (max-width: 960px) {
+  .dest-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .dest-grid {
+    grid-template-columns: 1fr;
+  }
+  .dest-img-wrap {
+    height: 175px;
+  }
+}
+
 /* ===== TOUR PACKAGES STYLING ===== */
 .packages-section {
   background: linear-gradient(180deg, #f8fbff 0%, #edf4fc 100%);

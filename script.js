@@ -1412,22 +1412,28 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Gallery Expand / Minimize Toggle
-  const btnToggleGallery = document.getElementById('btnToggleGallery');
-  const galleryToggleText = document.getElementById('galleryToggleText');
-  let isGalleryExpanded = false;
+  // 1-Click Popular Destination Auto-fill Handler
+  document.querySelectorAll('.btn-dest-book').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const dropVal = btn.getAttribute('data-drop') || '';
+      const dropInput = document.getElementById('dropInput');
+      const pickupInput = document.getElementById('pickupInput');
 
-  btnToggleGallery?.addEventListener('click', () => {
-    isGalleryExpanded = !isGalleryExpanded;
-    const extraItems = document.querySelectorAll('.gallery-extra');
-    
-    extraItems.forEach(item => {
-      item.style.display = isGalleryExpanded ? 'block' : 'none';
+      if (dropInput && dropVal) dropInput.value = dropVal;
+      if (pickupInput && !pickupInput.value) pickupInput.value = 'Kumbakonam, Tamil Nadu';
+
+      // Smooth scroll to booking form
+      const bookingSec = document.getElementById('booking');
+      if (bookingSec) {
+        bookingSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+
+      // Focus on customer name field
+      setTimeout(() => {
+        const nameInput = document.querySelector('input[name="name"]');
+        if (nameInput) nameInput.focus();
+      }, 500);
     });
-
-    if (galleryToggleText) {
-      galleryToggleText.textContent = isGalleryExpanded ? 'Show Less Photos ↑' : 'View More Photos (4+) ↓';
-    }
   });
 });
 
