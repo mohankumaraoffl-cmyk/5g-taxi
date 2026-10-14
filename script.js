@@ -1435,7 +1435,522 @@ document.addEventListener('DOMContentLoaded', () => {
       }, 500);
     });
   });
+
+  // Initialize Supabase Auth Module
+  initSupabaseAuthModule();
 });
+
+/* =========================================================================
+   SUPABASE AUTHENTICATION & LOGIN EVENT TRACKING MODULE
+   ========================================================================= */
+const SUPABASE_URL = 'https://eymtyabtkhvuppajdrxd.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_79X7YAqBTh_Hf5mFc3lLtg_42Kggm__';
+
+// Initialize Supabase Client via global window.supabase (loaded from CDN)
+const supabaseClient = (window.supabase && typeof window.supabase.createClient === 'function')
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
+
+function initSupabaseAuthModule() {
+  // DOM Elements
+  const authModal = document.getElementById('authModal');
+  const authBtnTrigger = document.getElementById('authBtnTrigger');
+  const authBtnLabel = document.getElementById('authBtnLabel');
+  const authIcon = document.getElementById('authIcon');
+  const authModalClose = document.getElementById('authModalClose');
+  const authModalTitle = document.getElementById('authModalTitle');
+  const authModalSubtitle = document.getElementById('authModalSubtitle');
+  const authAlertBox = document.getElementById('authAlertBox');
+
+  // Forms & Views
+  const authLoginForm = document.getElementById('authLoginForm');
+  const authRegisterForm = document.getElementById('authRegisterForm');
+  const authForgotForm = document.getElementById('authForgotForm');
+  const authUpdatePasswordForm = document.getElementById('authUpdatePasswordForm');
+  const authProfileView = document.getElementById('authProfileView');
+
+  // Navigation switch buttons
+  const btnGoRegister = document.getElementById('btnGoRegister');
+  const btnGoLoginFromReg = document.getElementById('btnGoLoginFromReg');
+  const btnGoForgot = document.getElementById('btnGoForgot');
+  const btnGoLoginFromForgot = document.getElementById('btnGoLoginFromForgot');
+  const btnLogoutUser = document.getElementById('btnLogoutUser');
+  const btnProfileBookRide = document.getElementById('btnProfileBookRide');
+
+  // Profile Card Elements
+  const profileName = document.getElementById('profileName');
+  const profileEmail = document.getElementById('profileEmail');
+  const profileAvatar = document.getElementById('profileAvatar');
+
+  // Current session & user cache
+  let currentUser = null;
+
+  // Helper: Open / Close Modal
+  function openModal(view = 'login') {
+    if (!authModal) return;
+    clearAlert();
+    showAuthView(view);
+    authModal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal() {
+    if (!authModal) return;
+    authModal.style.display = 'none';
+    document.body.style.overflow = '';
+    clearAlert();
+  }
+
+  // Switch between views inside modal
+  function showAuthView(view) {
+    clearAlert();
+    if (authLoginForm) authLoginForm.style.display = 'none';
+    if (authRegisterForm) authRegisterForm.style.display = 'none';
+    if (authForgotForm) authForgotForm.style.display = 'none';
+    if (authUpdatePasswordForm) authUpdatePasswordForm.style.display = 'none';
+    if (authProfileView) authProfileView.style.display = 'none';
+
+    if (view === 'login') {
+      if (authLoginForm) authLoginForm.style.display = 'block';
+      if (authModalTitle) authModalTitle.textContent = 'Welcome Back';
+      if (authModalSubtitle) authModalSubtitle.textContent = 'Sign in to manage your bookings and ride history';
+    } else if (view === 'register') {
+      if (authRegisterForm) authRegisterForm.style.display = 'block';
+      if (authModalTitle) authModalTitle.textContent = 'Create 5G Taxi Account';
+      if (authModalSubtitle) authModalSubtitle.textContent = 'Join 5G Taxi for faster bookings and special tour packages';
+    } else if (view === 'forgot') {
+      if (authForgotForm) authForgotForm.style.display = 'block';
+      if (authModalTitle) authModalTitle.textContent = 'Reset Password';
+      if (authModalSubtitle) authModalSubtitle.textContent = 'Enter your email to receive a password reset link';
+    } else if (view === 'update') {
+      if (authUpdatePasswordForm) authUpdatePasswordForm.style.display = 'block';
+      if (authModalTitle) authModalTitle.textContent = 'Update Password';
+      if (authModalSubtitle) authModalSubtitle.textContent = 'Enter a new secure password for your account';
+    } else if (view === 'profile') {
+      if (authProfileView) authProfileView.style.display = 'block';
+      if (authModalTitle) authModalTitle.textContent = 'Passenger Profile';
+      if (authModalSubtitle) authModalSubtitle.textContent = 'Your verified 5G Taxi account information';
+    }
+  }
+
+  // Alert Notifications
+  function showAlert(msg, type = 'error') {
+    if (!authAlertBox) return;
+    authAlertBox.className = `auth-alert-box ${type}`;
+    authAlertBox.textContent = msg;
+    authAlertBox.style.display = 'block';
+  }
+
+  function clearAlert() {
+    if (!authAlertBox) return;
+    authAlertBox.style.display = 'none';
+    authAlertBox.textContent = '';
+    authAlertBox.className = 'auth-alert-box';
+  }
+
+  // Button Loading State
+  function setButtonLoading(btn, isLoading, defaultText) {
+    if (!btn) return;
+    const txt = btn.querySelector('.btn-text');
+    const sp = btn.querySelector('.btn-spinner');
+    btn.disabled = isLoading;
+    if (isLoading) {
+      if (txt) txt.textContent = 'Processing...';
+      if (sp) sp.style.display = 'inline-block';
+    } else {
+      if (txt) txt.textContent = defaultText;
+      if (sp) sp.style.display = 'none';
+    }
+  }
+
+  // Password Visibility Toggle
+  document.querySelectorAll('.btn-toggle-pwd').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.getAttribute('data-target');
+      const input = document.getElementById(targetId);
+      if (input) {
+        const isPwd = input.type === 'password';
+        input.type = isPwd ? 'text' : 'password';
+        btn.textContent = isPwd ? '🙈' : '👁️';
+      }
+    });
+  });
+
+  // Track Successful Login Events in Supabase Database
+  async function trackLoginEvent(user) {
+    if (!supabaseClient || !user || !user.id) return;
+    try {
+      const { error } = await supabaseClient
+        .from('user_logins')
+        .insert([
+          {
+            user_id: user.id,
+            email: user.email || '',
+            logged_in_at: new Date().toISOString()
+          }
+        ]);
+      if (error) {
+        console.warn('Note: Login event logging in "user_logins" returned:', error.message);
+      } else {
+        console.log('Login event successfully recorded for user:', user.email);
+      }
+    } catch (err) {
+      console.warn('Could not record login event:', err);
+    }
+  }
+
+  // Sync Header Button and Profile UI with Auth State
+  function updateUIForUser(user) {
+    currentUser = user;
+    if (user) {
+      const metaName = user.user_metadata?.full_name || user.user_metadata?.name || '';
+      const displayName = metaName || (user.email ? user.email.split('@')[0] : 'Passenger');
+      const initial = displayName.charAt(0).toUpperCase();
+
+      if (authBtnTrigger) {
+        authBtnTrigger.classList.add('logged-in');
+        authBtnTrigger.setAttribute('title', `Logged in as ${user.email}`);
+      }
+      if (authBtnLabel) {
+        authBtnLabel.textContent = displayName;
+      }
+      if (authIcon) {
+        authIcon.textContent = initial;
+      }
+
+      // Populate profile card
+      if (profileName) profileName.textContent = displayName;
+      if (profileEmail) profileEmail.textContent = user.email || '';
+      if (profileAvatar) profileAvatar.textContent = initial;
+
+      // Auto-fill booking form fields if empty
+      const formName = document.querySelector('input[name="name"]');
+      if (formName && !formName.value && metaName) {
+        formName.value = metaName;
+      }
+    } else {
+      if (authBtnTrigger) {
+        authBtnTrigger.classList.remove('logged-in');
+        authBtnTrigger.setAttribute('title', 'Sign In or Register');
+      }
+      if (authBtnLabel) {
+        authBtnLabel.textContent = 'Login';
+      }
+      if (authIcon) {
+        authIcon.textContent = '👤';
+      }
+    }
+  }
+
+  // Event Listeners for Modal Toggling
+  if (authBtnTrigger) {
+    authBtnTrigger.addEventListener('click', () => {
+      if (currentUser) {
+        openModal('profile');
+      } else {
+        openModal('login');
+      }
+    });
+  }
+
+  if (authModalClose) {
+    authModalClose.addEventListener('click', closeModal);
+  }
+
+  // Close on outside backdrop click
+  if (authModal) {
+    authModal.addEventListener('click', (e) => {
+      if (e.target === authModal) {
+        closeModal();
+      }
+    });
+  }
+
+  // Close on ESC key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && authModal && authModal.style.display !== 'none') {
+      closeModal();
+    }
+  });
+
+  // Switch Links
+  if (btnGoRegister) {
+    btnGoRegister.addEventListener('click', () => showAuthView('register'));
+  }
+  if (btnGoLoginFromReg) {
+    btnGoLoginFromReg.addEventListener('click', () => showAuthView('login'));
+  }
+  if (btnGoForgot) {
+    btnGoForgot.addEventListener('click', () => showAuthView('forgot'));
+  }
+  if (btnGoLoginFromForgot) {
+    btnGoLoginFromForgot.addEventListener('click', () => showAuthView('login'));
+  }
+  if (btnProfileBookRide) {
+    btnProfileBookRide.addEventListener('click', () => {
+      closeModal();
+    });
+  }
+
+  // Check if Supabase client is available
+  if (!supabaseClient) {
+    console.error('Supabase client is not loaded. Please verify the CDN script in index.html.');
+    if (authBtnTrigger) {
+      authBtnTrigger.addEventListener('click', () => {
+        showAlert('Supabase library could not be loaded. Please check internet connection.', 'error');
+      });
+    }
+    return;
+  }
+
+  // 1. SIGN IN SUBMIT
+  if (authLoginForm) {
+    authLoginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearAlert();
+
+      const email = document.getElementById('loginEmail')?.value.trim();
+      const password = document.getElementById('loginPassword')?.value;
+      const submitBtn = document.getElementById('btnLoginSubmit');
+
+      if (!email || !password) {
+        showAlert('Please enter both email and password.', 'error');
+        return;
+      }
+
+      setButtonLoading(submitBtn, true, 'Sign In');
+
+      try {
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+          email,
+          password
+        });
+
+        if (error) {
+          showAlert(error.message, 'error');
+          setButtonLoading(submitBtn, false, 'Sign In');
+          return;
+        }
+
+        showAlert('Signed in successfully! Welcome back.', 'success');
+        if (data && data.user) {
+          updateUIForUser(data.user);
+          // Record login event in database
+          await trackLoginEvent(data.user);
+        }
+
+        setTimeout(() => {
+          closeModal();
+          setButtonLoading(submitBtn, false, 'Sign In');
+        }, 1200);
+
+      } catch (err) {
+        showAlert(err.message || 'An unexpected error occurred.', 'error');
+        setButtonLoading(submitBtn, false, 'Sign In');
+      }
+    });
+  }
+
+  // 2. SIGN UP (REGISTER) SUBMIT
+  if (authRegisterForm) {
+    authRegisterForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearAlert();
+
+      const name = document.getElementById('regName')?.value.trim();
+      const email = document.getElementById('regEmail')?.value.trim();
+      const password = document.getElementById('regPassword')?.value;
+      const submitBtn = document.getElementById('btnRegisterSubmit');
+
+      if (!name || !email || !password) {
+        showAlert('Please fill in all registration fields.', 'error');
+        return;
+      }
+
+      if (password.length < 6) {
+        showAlert('Password must be at least 6 characters.', 'error');
+        return;
+      }
+
+      setButtonLoading(submitBtn, true, 'Create Account');
+
+      try {
+        const { data, error } = await supabaseClient.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: name
+            }
+          }
+        });
+
+        if (error) {
+          showAlert(error.message, 'error');
+          setButtonLoading(submitBtn, false, 'Create Account');
+          return;
+        }
+
+        // If email confirmation is disabled in Supabase, session is created immediately
+        if (data.session) {
+          showAlert('Account created and signed in successfully! Welcome to 5G Taxi.', 'success');
+          if (data.user) {
+            updateUIForUser(data.user);
+            await trackLoginEvent(data.user);
+          }
+          setTimeout(() => {
+            closeModal();
+            setButtonLoading(submitBtn, false, 'Create Account');
+          }, 1500);
+        } else {
+          // If email confirmation is enabled in Supabase project settings
+          showAlert('Account created! Please check your email inbox to confirm your account before signing in.', 'info');
+          setButtonLoading(submitBtn, false, 'Create Account');
+        }
+
+      } catch (err) {
+        showAlert(err.message || 'An error occurred during account creation.', 'error');
+        setButtonLoading(submitBtn, false, 'Create Account');
+      }
+    });
+  }
+
+  // 3. FORGOT PASSWORD (REQUEST RESET LINK)
+  if (authForgotForm) {
+    authForgotForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearAlert();
+
+      const email = document.getElementById('forgotEmail')?.value.trim();
+      const submitBtn = document.getElementById('btnForgotSubmit');
+
+      if (!email) {
+        showAlert('Please provide your registered email address.', 'error');
+        return;
+      }
+
+      setButtonLoading(submitBtn, true, 'Send Reset Link');
+
+      try {
+        // Redirect back to current site with hash
+        const redirectUrl = window.location.origin + window.location.pathname;
+        const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+          redirectTo: redirectUrl
+        });
+
+        if (error) {
+          showAlert(error.message, 'error');
+          setButtonLoading(submitBtn, false, 'Send Reset Link');
+          return;
+        }
+
+        showAlert('Password reset link sent! Check your inbox and click the link to update your password.', 'success');
+        setButtonLoading(submitBtn, false, 'Send Reset Link');
+
+      } catch (err) {
+        showAlert(err.message || 'Failed to send password reset email.', 'error');
+        setButtonLoading(submitBtn, false, 'Send Reset Link');
+      }
+    });
+  }
+
+  // 4. UPDATE PASSWORD SUBMIT
+  if (authUpdatePasswordForm) {
+    authUpdatePasswordForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearAlert();
+
+      const newPassword = document.getElementById('newPassword')?.value;
+      const submitBtn = document.getElementById('btnUpdatePasswordSubmit');
+
+      if (!newPassword || newPassword.length < 6) {
+        showAlert('New password must be at least 6 characters.', 'error');
+        return;
+      }
+
+      setButtonLoading(submitBtn, true, 'Update Password');
+
+      try {
+        const { data, error } = await supabaseClient.auth.updateUser({
+          password: newPassword
+        });
+
+        if (error) {
+          showAlert(error.message, 'error');
+          setButtonLoading(submitBtn, false, 'Update Password');
+          return;
+        }
+
+        showAlert('Your password has been successfully updated! You can now use your new password.', 'success');
+        if (data && data.user) {
+          updateUIForUser(data.user);
+        }
+
+        setTimeout(() => {
+          closeModal();
+          setButtonLoading(submitBtn, false, 'Update Password');
+        }, 1500);
+
+      } catch (err) {
+        showAlert(err.message || 'Failed to update password.', 'error');
+        setButtonLoading(submitBtn, false, 'Update Password');
+      }
+    });
+  }
+
+  // 5. LOGOUT
+  if (btnLogoutUser) {
+    btnLogoutUser.addEventListener('click', async () => {
+      try {
+        btnLogoutUser.disabled = true;
+        btnLogoutUser.textContent = 'Logging out...';
+        await supabaseClient.auth.signOut();
+        updateUIForUser(null);
+        showAlert('You have been logged out successfully.', 'info');
+        setTimeout(() => {
+          btnLogoutUser.disabled = false;
+          btnLogoutUser.textContent = 'Log Out of 5G Taxi';
+          closeModal();
+        }, 800);
+      } catch (err) {
+        console.error('Logout error:', err);
+        closeModal();
+      }
+    });
+  }
+
+  // 6. INITIAL SESSION CHECK & AUTH STATE LISTENER
+  async function checkInitialSession() {
+    try {
+      const { data: { session }, error } = await supabaseClient.auth.getSession();
+      if (!error && session && session.user) {
+        updateUIForUser(session.user);
+      } else {
+        updateUIForUser(null);
+      }
+    } catch (e) {
+      console.warn('Session verification error:', e);
+    }
+  }
+
+  // Listen to Supabase Auth State Changes (Login, Logout, Token Refreshed, Password Recovery)
+  supabaseClient.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_IN' && session?.user) {
+      updateUIForUser(session.user);
+    } else if (event === 'SIGNED_OUT') {
+      updateUIForUser(null);
+    } else if (event === 'PASSWORD_RECOVERY') {
+      // Triggered when user opens the password reset recovery link from email
+      openModal('update');
+      showAlert('Enter your new password below to reset your account password.', 'info');
+    } else if (event === 'USER_UPDATED' && session?.user) {
+      updateUIForUser(session.user);
+    }
+  });
+
+  // Run initial session check
+  checkInitialSession();
+}
 
 
 
