@@ -1576,23 +1576,44 @@ function initSupabaseAuthModule() {
     });
   });
 
-  // Track Successful Login Events in Supabase Database
+  // Helper: Get Indian Standard Time (IST, UTC+5:30) ISO string
+  function getIndianStandardTimeISO() {
+    const now = new Date();
+    // Offset for IST is +05:30 (330 minutes)
+    const istOffsetMs = 330 * 60 * 1000;
+    // Calculate UTC time in ms, then add 5.5 hours
+    const utcMs = now.getTime() + (now.getTimezoneOffset() * 60 * 1000);
+    const istDate = new Date(utcMs + istOffsetMs);
+
+    const pad = (n) => String(n).padStart(2, '0');
+    const yyyy = istDate.getFullYear();
+    const mm = pad(istDate.getMonth() + 1);
+    const dd = pad(istDate.getDate());
+    const hh = pad(istDate.getHours());
+    const min = pad(istDate.getMinutes());
+    const ss = pad(istDate.getSeconds());
+
+    return `${yyyy}-${mm}-${dd}T${hh}:${min}:${ss}+05:30`;
+  }
+
+  // Track Successful Login Events in Supabase Database (Indian Standard Time)
   async function trackLoginEvent(user) {
     if (!supabaseClient || !user || !user.id) return;
     try {
+      const istTimestamp = getIndianStandardTimeISO();
       const { error } = await supabaseClient
         .from('user_logins')
         .insert([
           {
             user_id: user.id,
             email: user.email || '',
-            logged_in_at: new Date().toISOString()
+            logged_in_at: istTimestamp
           }
         ]);
       if (error) {
         console.warn('Note: Login event logging in "user_logins" returned:', error.message);
       } else {
-        console.log('Login event successfully recorded for user:', user.email);
+        console.log('Login event successfully recorded (IST):', istTimestamp, 'for user:', user.email);
       }
     } catch (err) {
       console.warn('Could not record login event:', err);
